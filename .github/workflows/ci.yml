@@ -42,7 +42,7 @@ jobs:
           source .env
           echo "Installing Vault ${VAULT_VERSION}"
           curl -sLo vault.zip "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip"
-          unzip vault.zip
+          unzip vault.zip vault
           sudo mv vault /usr/local/bin/
           vault version
 
