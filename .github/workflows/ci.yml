@@ -51,6 +51,11 @@ jobs:
           export PATH=$PWD/.venv/bin:$PATH
           task all
 
+      - name: Upgrade Vault to new version and re-run regression suite
+        run: |
+          export PATH=$PWD/.venv/bin:$PATH
+          task upgrade
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4

@@ -87,6 +87,13 @@ tasks:
           exit 1
         fi
 
+  status:
+    desc: Check Vault status
+    cmds:
+      - |
+        source .env
+        vault status
+
   config:
     desc: Initialize and apply Terraform configuration
     dir: terraform
@@ -117,6 +124,17 @@ tasks:
       - task: down
       - rm -rf {{.INIT_FILE}} terraform/.terraform terraform/terraform.tfstate terraform/terraform.tfstate.backup .pytest_cache report.xml coverage.xml report.html coverage_html
       - docker volume rm vault-regression-testing_vault_data 2>/dev/null || true
+
+  upgrade:
+    desc: Upgrade Vault version and run tests
+    cmds:
+      - |
+        source .env
+        VAULT_VERSION=$VAULT_VERSION_UPGRADE docker compose up -d --force-recreate
+        VAULT_VERSION=$VAULT_VERSION_UPGRADE task up
+      - task: unseal
+      - task: status
+      - task: test
 
   all:
     desc: Run everything (clean, lint, up, init, unseal, config, test)
