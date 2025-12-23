@@ -1,0 +1,27 @@
+services:
+  vault:
+    image: hashicorp/vault:${VAULT_VERSION:-1.19.5}
+    container_name: vault-regression-test
+    env_file:
+      - .env
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault_data:/vault/file
+    configs:
+      - source: vault-config
+        target: /etc/vault.hcl
+    command: server -config=/etc/vault.hcl
+
+configs:
+  vault-config:
+    file: ./configs/vault.hcl
+
+networks:
+  default:
+    name: ${COMPOSE_PROJECT_NAME:-vault-regression-testing}
+
+volumes:
+  vault_data:

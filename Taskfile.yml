@@ -1,0 +1,131 @@
+version: '3'
+
+dotenv: ['.env']
+
+vars:
+  INIT_FILE: .vault_init.json
+
+tasks:
+  prereqs:
+    desc: Check if all prerequisites are installed
+    cmds:
+      - which docker
+      - which terraform
+      - which jq
+      - which python3
+      - which curl
+      - echo "All prerequisites are installed."
+    silent: true
+
+  setup:
+    desc: Create virtual environment, install dependencies, and create .env
+    cmds:
+      - test -f .env || cp .env.example .env
+      - python3 -m venv .venv
+      - ./.venv/bin/pip install -r requirements.txt
+    silent: true
+
+  up:
+    desc: Start Vault container and wait for readiness
+    cmds:
+      - docker compose up -d
+      - |
+        . .env
+        echo "Waiting for Vault to be ready..."
+        for i in $(seq 1 30); do
+          if curl -s -o /dev/null $VAULT_ADDR/v1/sys/health; then
+            echo "Vault API is responding"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "Timeout waiting for Vault"
+        exit 1
+    silent: true
+
+  down:
+    desc: Stop Vault container
+    cmds:
+      - docker compose down
+
+  init:
+    desc: Initialize Vault and update .env
+    interactive: true
+    cmds:
+      - |
+        . .env
+        if [ -f {{.INIT_FILE}} ]; then
+          printf "Vault init file already exists. Overwrite? (y/N): "
+          read yn
+          if [ "$yn" != "y" ] && [ "$yn" != "Y" ]; then
+            echo "Initialization skipped."
+            exit 0
+          fi
+        fi
+        docker exec -e VAULT_ADDR=$VAULT_ADDR vault-regression-test vault operator init -format=json > {{.INIT_FILE}}
+        if [ -s {{.INIT_FILE}} ]; then
+          ROOT_TOKEN=$(jq -r '.root_token' {{.INIT_FILE}})
+          sed -i.bak "s/export VAULT_TOKEN=.*/export VAULT_TOKEN=$ROOT_TOKEN/" .env && rm .env.bak
+          echo "Vault initialized. Root token updated in .env"
+        else
+          echo "Failed to initialize Vault or empty output."
+          exit 1
+        fi
+
+  unseal:
+    desc: Unseal Vault
+    cmds:
+      - |
+        . .env
+        if [ -f {{.INIT_FILE}} ]; then
+          KEYS=$(jq -r '.unseal_keys_b64[]' {{.INIT_FILE}})
+          for key in $KEYS; do
+            docker exec -e VAULT_ADDR=$VAULT_ADDR vault-regression-test vault operator unseal $key
+          done
+        else
+          echo "Init file missing. Cannot unseal."
+          exit 1
+        fi
+
+  config:
+    desc: Initialize and apply Terraform configuration
+    dir: terraform
+    cmds:
+      - export PATH="$PATH:$HOME/bin" && terraform init
+      - . ../.env && terraform apply -auto-approve
+
+  test:
+    desc: Run pytest suite
+    cmds:
+      - . .env && ./.venv/bin/python3 -m pytest --cov=tests --cov-report=term-missing
+
+  lint:
+    desc: Run Python linting (flake8, black)
+    cmds:
+      - ./.venv/bin/python3 -m flake8 tests
+      - ./.venv/bin/python3 -m black --check tests
+
+  teardown:
+    desc: Destroy Terraform resources
+    dir: terraform
+    cmds:
+      - . ../.env && export PATH="$PATH:$HOME/bin" && terraform destroy -auto-approve -lock=false
+
+  clean:
+    desc: Cleanup all temporary files, virtual environments, and Docker resources
+    cmds:
+      - task: down
+      - rm -rf {{.INIT_FILE}} terraform/.terraform terraform/terraform.tfstate terraform/terraform.tfstate.backup .pytest_cache
+      - docker volume rm vault-regression-testing_vault_data 2>/dev/null || true
+
+  all:
+    desc: Run everything (clean, lint, up, init, unseal, config, test)
+    cmds:
+      - test -f .env || cp .env.example .env
+      - task: prereqs
+      - task: lint
+      - task: up
+      - task: init
+      - task: unseal
+      - task: config
+      - task: test
