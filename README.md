@@ -22,7 +22,7 @@ This project provides a Vault test environment running in Docker. It uses Terraf
 - **Go Task** (`task`)
 - **Python 3.14+**
 - **jq**
-- 
+
 You can verify your environment by running:
 ```bash
 task prereqs
@@ -77,7 +77,7 @@ task all
 - `task init`: Initialize Vault and generate `.vault_init.json`.
 - `task unseal`: Unseal the Vault using stored keys.
 - `task config`: Apply Terraform configuration (KV, AppRole, Policies, Audit).
-- `task test` (or `task tests`): Run the full pytest suite.
+- `task test`: Run the full pytest suite.
 - `task upgrade`: Upgrade Vault version (configurable via `VAULT_VERSION_UPGRADE` in `.env`) and re-run regression suite.
 - `task status`: Check the current status of the Vault server.
 - `task teardown`: Destroy Terraform resources.
