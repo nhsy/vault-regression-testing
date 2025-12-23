@@ -97,7 +97,7 @@ tasks:
   test:
     desc: Run pytest suite
     cmds:
-      - . .env && ./.venv/bin/python3 -m pytest --cov=tests --cov-report=term-missing
+      - . .env && ./.venv/bin/python3 -m pytest --cov=tests --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage_html --junitxml=report.xml --html=report.html --self-contained-html
 
   lint:
     desc: Run Python linting (flake8, black)
@@ -115,7 +115,7 @@ tasks:
     desc: Cleanup all temporary files, virtual environments, and Docker resources
     cmds:
       - task: down
-      - rm -rf {{.INIT_FILE}} terraform/.terraform terraform/terraform.tfstate terraform/terraform.tfstate.backup .pytest_cache
+      - rm -rf {{.INIT_FILE}} terraform/.terraform terraform/terraform.tfstate terraform/terraform.tfstate.backup .pytest_cache report.xml coverage.xml report.html coverage_html
       - docker volume rm vault-regression-testing_vault_data 2>/dev/null || true
 
   all:

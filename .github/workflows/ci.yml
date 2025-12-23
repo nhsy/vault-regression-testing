@@ -23,19 +23,6 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq unzip
-
-      - name: Install Vault CLI
-        run: |
-          source .env.example
-          echo "Installing Vault ${VAULT_VERSION}"
-          curl -sLo vault.zip "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip"
-          unzip vault.zip
-          sudo mv vault /usr/local/bin/
-          vault version
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -50,7 +37,29 @@ jobs:
         run: |
           task setup
 
+      - name: Install Vault CLI
+        run: |
+          source .env
+          echo "Installing Vault ${VAULT_VERSION}"
+          curl -sLo vault.zip "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip"
+          unzip vault.zip
+          sudo mv vault /usr/local/bin/
+          vault version
+
       - name: Run Regression Suite
         run: |
           export PATH=$PWD/.venv/bin:$PATH
           task all
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: |
+            report.xml
+            coverage.xml
+            report.html
+            coverage_html/
+
+      
