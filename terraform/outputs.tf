@@ -25,11 +25,11 @@ output "test_secret_path" {
 
 output "test_config" {
   value = {
-    vault_address      = var.vault_address
-    kv_mount           = vault_mount.kv.path
-    approle_mount      = vault_auth_backend.approle.path
-    approle_role       = vault_approle_auth_backend_role.test_role.role_name
-    test_secret_path   = vault_kv_secret_v2.test_secret.name
-    test_policy        = vault_policy.test_policy.name
+    vault_address    = var.vault_address
+    kv_mount         = vault_mount.kv.path
+    approle_mount    = vault_auth_backend.approle.path
+    approle_role     = vault_approle_auth_backend_role.test_role.role_name
+    test_secret_path = vault_kv_secret_v2.test_secret.name
+    test_policy      = vault_policy.test_policy.name
   }
 }

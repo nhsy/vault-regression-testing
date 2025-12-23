@@ -49,20 +49,16 @@ jobs:
         id: cache-vault
         uses: actions/cache@v4
         with:
-          path: ~/bin/vault
+          path: /usr/local/bin/vault
           key: vault-${{ runner.os }}-${{ steps.versions.outputs.vault }}
 
       - name: Download Vault Binary
         run: |
-          mkdir -p ~/bin
-          if [ ! -f ~/bin/vault ]; then
-            VERSION=${{ steps.versions.outputs.vault }}
-            echo "Installing Vault ${VERSION}"
-            curl -sLo vault.zip "https://releases.hashicorp.com/vault/${VERSION}/vault_${VERSION}_linux_amd64.zip"
-            unzip vault.zip vault
-            mv vault ~/bin/
-          fi
-          echo "$HOME/bin" >> $GITHUB_PATH
+          VERSION=${{ steps.versions.outputs.vault }}
+          echo "Installing Vault ${VERSION}"
+          curl -sLo vault.zip "https://releases.hashicorp.com/vault/${VERSION}/vault_${VERSION}_linux_amd64.zip"
+          unzip vault.zip vault
+          mv vault /usr/local/bin/
 
       - name: Setup Environment and Lint
         run: |
@@ -75,7 +71,6 @@ jobs:
           task up
           task init
           task terraform:apply
-          sleep 10
 
       - name: Run Tests
         run: |
@@ -96,5 +91,3 @@ jobs:
             coverage.xml
             report.html
             coverage_html/
-
-      

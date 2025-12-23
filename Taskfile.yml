@@ -127,25 +127,27 @@ tasks:
     desc: Initialize and apply Terraform configuration
     dir: terraform
     cmds:
-      - export PATH="$PATH:$HOME/bin" && terraform init
-      - . ../.env && terraform apply -auto-approve
+      - terraform init
+      - source ./../.env && terraform apply -auto-approve
+      - sleep 10
 
   terraform:destroy:
     desc: Destroy Terraform resources
     dir: terraform
     cmds:
-      - . ../.env && export PATH="$PATH:$HOME/bin" && terraform destroy -auto-approve -lock=false
+      - source .env && terraform destroy -auto-approve -lock=false
 
   test:
     desc: Run pytest suite
     cmds:
-      - . .env && ./.venv/bin/python3 -m pytest --cov=tests --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage_html --junitxml=report.xml --html=report.html --self-contained-html
+      - source .env && ./.venv/bin/python3 -m pytest --cov=tests --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage_html --junitxml=report.xml --html=report.html --self-contained-html
 
   lint:
-    desc: Run Python linting (flake8, black)
+    desc: Run Python linting (flake8, black) and Terraform formatting
     cmds:
       - ./.venv/bin/python3 -m flake8 tests
       - ./.venv/bin/python3 -m black --check tests
+      - terraform fmt -check -recursive
 
   clean:
     desc: Cleanup all temporary files, virtual environments, and Docker resources
@@ -167,6 +169,7 @@ tasks:
         VAULT_VERSION=$VAULT_VERSION_UPGRADE task up
       - task: vault:unseal
       - task: vault:status
+      - sleep 10
       - task: test
 
   all:
@@ -177,5 +180,4 @@ tasks:
       - task: up
       - task: init
       - task: terraform:apply
-      - sleep 10
       - task: test

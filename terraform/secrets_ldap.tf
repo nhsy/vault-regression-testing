@@ -1,9 +1,9 @@
 resource "vault_ldap_secret_backend" "config" {
-  path        = "ldap-secrets"
-  binddn      = var.ldap_bind_dn
-  bindpass    = var.ldap_bind_password
-  url         = var.ldap_url
-  userdn      = var.ldap_user_dn
+  path         = "ldap-secrets"
+  binddn       = var.ldap_bind_dn
+  bindpass     = var.ldap_bind_password
+  url          = var.ldap_url
+  userdn       = var.ldap_user_dn
   insecure_tls = true
 }
 

@@ -6,8 +6,8 @@ resource "vault_mount" "kv" {
 }
 
 resource "vault_kv_secret_v2" "test_secret" {
-  mount     = vault_mount.kv.path
-  name      = "test/app/config"
+  mount = vault_mount.kv.path
+  name  = "test/app/config"
   data_json = jsonencode({
     api_key = "test-12345"
     debug   = "true"
