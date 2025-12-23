@@ -6,12 +6,10 @@ A robust regression testing framework for HashiCorp Vault, designed to automate 
 
 ## Project Overview
 
-This project provides a production-like Vault environment (Standard Mode) running in Docker. It uses Terraform to configure Vault resources and Pytest to verify the setup against specific regression scenarios. All tasks are orchestrated through a `Taskfile`.
+This project provides a Vault test environment running in Docker. It uses Terraform to configure Vault resources and Pytest to verify the setup against specific regression scenarios. All tasks are orchestrated through a `Taskfile`.
 
 ## Key Features
 
-- **Vault Standard Mode**: Persistent storage using the `file` backend and Docker Configs.
-- **Isolation**: Named Docker volumes (`vault_data`) and a dedicated project network.
 - **Automation**: Fully automated initialization, unsealing, and token management.
 - **Testing**: Extended Pytest suite covering health checks, KV secrets, AppRole authentication, security policies, and operational status.
 - **Audit Logging**: Configurable file-based audit logging (enabled to stdout by default).
@@ -20,11 +18,11 @@ This project provides a production-like Vault environment (Standard Mode) runnin
 ## Prerequisites
 
 - **Docker & Docker Compose**
-- **Terraform** (managed via `tfswitch` or manually in `$HOME/bin`)
+- **Terraform**
 - **Go Task** (`task`)
 - **Python 3.14+**
-- **jq** (for processing Vault JSON output)
-
+- **jq**
+- 
 You can verify your environment by running:
 ```bash
 task prereqs
@@ -79,13 +77,15 @@ task all
 - `task init`: Initialize Vault and generate `.vault_init.json`.
 - `task unseal`: Unseal the Vault using stored keys.
 - `task config`: Apply Terraform configuration (KV, AppRole, Policies, Audit).
-- `task test`: Run the full pytest suite.
+- `task test` (or `task tests`): Run the full pytest suite.
+- `task upgrade`: Upgrade Vault version (configurable via `VAULT_VERSION_UPGRADE` in `.env`) and re-run regression suite.
+- `task status`: Check the current status of the Vault server.
 - `task teardown`: Destroy Terraform resources.
 - `task down`: Stop the Vault container and remove networks.
 
 ## Documentation
 
-For a detailed analysis of the architecture, setup instructions, and verification steps, refer to the [Solution Outline & Walkthrough](docs/solution-outline.md).
+For a detailed analysis of the architecture, setup instructions, and verification steps, refer to the [Solution Outline](docs/solution-outline.md).
 
 ---
 *Note: This framework is intended for regression testing and development environments.*

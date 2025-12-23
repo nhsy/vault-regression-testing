@@ -17,11 +17,6 @@ The solution is built on a modular stack that emphasizes automation, reproducibi
 - **Configuration Management**: [Terraform](https://www.terraform.io/) is the "source of truth" for Vault's internal state (policies, auth methods, and secrets engines).
 - **Verification**: [Pytest](https://docs.pytest.org/) with the [hvac](https://github.com/hvac/hvac) library performs assertions against the live Vault API.
 
-### Key Design Decisions
-- **Standard Mode over Dev Mode**: Simulates production behavior, including initialization, unsealing, and persistence.
-- **AppRole for Machine Identity**: Recommended method for machine-to-machine authentication.
-- **Idempotency**: Both Taskfile and Terraform configurations can be run multiple times without side effects.
-
 ---
 
 ## 2. Environment Setup
@@ -82,6 +77,10 @@ task test
 ---
 
 ## 5. Maintenance & Troubleshooting
+
+### Upgrading & Status
+- **Upgrade**: `task upgrade` updates the Vault version (defined by `VAULT_VERSION_UPGRADE` in `.env`), recreates the container, unseals it, and runs the regression suite to ensure compatibility.
+- **Status**: `task status` provides a quick snapshot of the Vault server's health and seal status.
 
 ### Teardown
 - **Stop**: `task down` stops the container.
