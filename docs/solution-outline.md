@@ -13,7 +13,7 @@ Manual regression testing of HashiCorp Vault configurations is error-prone and t
 The solution is built on a modular stack that emphasizes automation, reproducibility, and isolation.
 
 - **Orchestration**: [Go Task](https://taskfile.dev/) (Taskfile.yml) serves as the entry point for all operations.
-- **Infrastructure**: [Docker Compose](https://docs.docker.com/compose/) manages a Vault container in **Standard Mode** with a persistent `file` backend, and an **OpenLDAP** container for identity testing.
+- **Infrastructure**: [Docker Compose](https://docs.docker.com/compose/) manages a Vault container in **Standard Mode** with a persistent `file` backend, a **PostgreSQL** container for database secrets testing, and an **OpenLDAP** container for identity testing.
 - **Configuration Management**: [Terraform](https://www.terraform.io/) is the "source of truth" for Vault's internal state (policies, auth methods, and secrets engines).
 - **Verification**: [Pytest](https://docs.pytest.org/) with the [hvac](https://github.com/hvac/hvac) library performs assertions against the live Vault API.
 
@@ -38,8 +38,10 @@ The solution is built on a modular stack that emphasizes automation, reproducibi
     |    +---------v---------+   |
     +--->|  Vault Container  |<--+
          +-------------------+
-         |  OpenLDAP Container |
-         +---------------------+
+         | PostgreSQL Container |
+         +----------------------+
+         |  OpenLDAP Container  |
+         +----------------------+
 ```
 
 ---
@@ -72,7 +74,7 @@ task all
 
 ### Step-by-Step Breakdown
 
-1. **Start Infrastructure**: `task up` starts Vault and OpenLDAP containers and waits for readiness.
+1. **Start Infrastructure**: `task up` starts Vault, PostgreSQL, and OpenLDAP containers and waits for readiness.
 2. **Initialize Services**: `task init` performs consolidated initialization:
    - Seeds LDAP server with sample users and groups.
    - Generates Vault keys and stores them in `.vault_init.json`.
@@ -82,6 +84,7 @@ task all
    - **AppRole Auth** for machine authentication.
    - **LDAP Auth** with Identity Group mapping.
    - **LDAP Secrets Engine** for static/dynamic credentials.
+   - **Database Secrets Engine** with PostgreSQL connection and dynamic roles.
    - **Policies** (admin, read-only).
    - **Audit Devices** for tracking activity.
 
@@ -100,6 +103,11 @@ task test
 - **System Health**: Verifies initialization, unseal status, and versioning.
 - **KV Secrets**: Tests CRUD operations on the V2 engine.
 - **AppRole Auth**: Validates login capabilities and policy attachment.
+- **Database Secrets**:
+  - Generates dynamic PostgreSQL credentials (readonly and readwrite roles).
+  - Verifies database connectivity with generated credentials.
+  - Tests credential revocation and TTL limits.
+  - Validates proper role permissions and isolation.
 - **LDAP Integration**:
   - Authenticates as LDAP users (`alice`, `bob`).
   - Verifies policy assignment via Identity Groups.

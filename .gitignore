@@ -10,10 +10,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
-report.xml
-coverage.xml
-report.html
-coverage_html/
+outputs/
 *.log
 
 # Terraform
@@ -36,13 +33,9 @@ coverage_html/
 # OS
 
 .DS_Store
-
 Thumbs.db
-
-
+*.bak
 
 CLAUDE.md
-
-
-
 references/
+

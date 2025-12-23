@@ -33,3 +33,14 @@ output "test_config" {
     test_policy      = vault_policy.test_policy.name
   }
 }
+
+output "database_mount_path" {
+  value = vault_mount.database.path
+}
+
+output "database_roles" {
+  value = {
+    readonly  = vault_database_secret_backend_role.readonly.name
+    readwrite = vault_database_secret_backend_role.readwrite.name
+  }
+}

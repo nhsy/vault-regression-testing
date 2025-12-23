@@ -53,12 +53,13 @@ jobs:
           key: vault-${{ runner.os }}-${{ steps.versions.outputs.vault }}
 
       - name: Download Vault Binary
+        if: steps.cache-vault.outputs.cache-hit != 'true'
         run: |
           VERSION=${{ steps.versions.outputs.vault }}
           echo "Installing Vault ${VERSION}"
           curl -sLo vault.zip "https://releases.hashicorp.com/vault/${VERSION}/vault_${VERSION}_linux_amd64.zip"
           unzip vault.zip vault
-          mv vault /usr/local/bin/
+          sudo mv vault /usr/local/bin/
 
       - name: Setup Environment and Lint
         run: |
@@ -86,8 +87,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytest-results
-          path: |
-            report.xml
-            coverage.xml
-            report.html
-            coverage_html/
+          path: outputs/

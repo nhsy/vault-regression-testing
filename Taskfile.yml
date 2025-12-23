@@ -7,6 +7,7 @@ vars:
   PROJECT_NAME: '{{.COMPOSE_PROJECT_NAME | default "vault-regression-testing"}}'
   VAULT_CONTAINER: '{{.COMPOSE_PROJECT_NAME | default "vault-regression-testing"}}_vault'
   LDAP_CONTAINER: '{{.COMPOSE_PROJECT_NAME | default "vault-regression-testing"}}_ldap'
+  POSTGRES_CONTAINER: '{{.COMPOSE_PROJECT_NAME | default "vault-regression-testing"}}_postgres'
 
 tasks:
   prereqs:
@@ -57,7 +58,7 @@ tasks:
   down:
     desc: Stop containers and remove volumes
     cmds:
-      - docker compose down -v --remove-orphans
+      - docker compose rm -vfs
 
   init:
     desc: Initialize both LDAP and Vault
@@ -66,6 +67,7 @@ tasks:
       - task: ldap:init
       - task: vault:init
       - task: vault:unseal
+    silent: true
 
   ldap:init:
     desc: Initialize LDAP with sample data
@@ -76,6 +78,67 @@ tasks:
     desc: Check LDAP status and list users
     cmds:
       - docker exec {{.LDAP_CONTAINER}} ldapsearch -x -D "cn=admin,dc=example,dc=org" -w adminpassword -b "ou=People,dc=example,dc=org" "(objectClass=inetOrgPerson)" dn
+
+  postgres:status:
+    desc: Check PostgreSQL status and list databases
+    cmds:
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U vaultadmin -d vaultdb -c '\l'
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U vaultadmin -d vaultdb -c '\du'
+
+  postgres:test-readonly:
+    desc: Test Vault dynamic readonly credentials for PostgreSQL
+    cmds:
+      - |
+        source .env
+        echo "Generating readonly credentials from Vault..."
+        CREDS=$(vault read -format=json database/creds/readonly)
+        USERNAME=$(echo $CREDS | jq -r '.data.username')
+        PASSWORD=$(echo $CREDS | jq -r '.data.password')
+        LEASE_ID=$(echo $CREDS | jq -r '.lease_id')
+        echo "Username: $USERNAME"
+        echo "Lease ID: $LEASE_ID"
+        echo ""
+        echo "Testing database connection with readonly credentials..."
+        docker exec {{.POSTGRES_CONTAINER}} psql -U $USERNAME -d vaultdb -c 'SELECT COUNT(*) FROM test_data;' || echo "Failed to connect"
+        echo ""
+        echo "Testing write permissions (should fail)..."
+        docker exec {{.POSTGRES_CONTAINER}} psql -U $USERNAME -d vaultdb -c 'CREATE TABLE test_table (id INT);' && echo "ERROR: Should not have write access!" || echo "Correctly denied write access"
+        echo ""
+        echo "Revoking lease..."
+        vault lease revoke $LEASE_ID
+        echo "Lease revoked successfully"
+
+  postgres:test-readwrite:
+    desc: Test Vault dynamic readwrite credentials for PostgreSQL
+    cmds:
+      - |
+        source .env
+        echo "Generating readwrite credentials from Vault..."
+        CREDS=$(vault read -format=json database/creds/readwrite)
+        USERNAME=$(echo $CREDS | jq -r '.data.username')
+        PASSWORD=$(echo $CREDS | jq -r '.data.password')
+        LEASE_ID=$(echo $CREDS | jq -r '.lease_id')
+        echo "Username: $USERNAME"
+        echo "Lease ID: $LEASE_ID"
+        echo ""
+        echo "Testing database connection with readwrite credentials..."
+        docker exec {{.POSTGRES_CONTAINER}} psql -U $USERNAME -d vaultdb -c 'SELECT COUNT(*) FROM test_data;' || echo "Failed to connect"
+        echo ""
+        echo "Testing write permissions..."
+        docker exec {{.POSTGRES_CONTAINER}} psql -U $USERNAME -d vaultdb -c 'CREATE TABLE temp_test (id INT); INSERT INTO temp_test VALUES (1); DROP TABLE temp_test;' && echo "Write access confirmed" || echo "ERROR: Should have write access!"
+        echo ""
+        echo "Revoking lease..."
+        vault lease revoke $LEASE_ID
+        echo "Lease revoked successfully"
+
+  postgres:test:
+    desc: Test both readonly and readwrite dynamic credentials
+    cmds:
+      - task: postgres:test-readonly
+      - echo ""
+      - echo "================================"
+      - echo ""
+      - task: postgres:test-readwrite
 
   vault:init:
     desc: Initialize Vault and update .env
@@ -124,6 +187,7 @@ tasks:
         vault status
 
   terraform:apply:
+    aliases: [apply]
     desc: Initialize and apply Terraform configuration
     dir: terraform
     cmds:
@@ -140,7 +204,8 @@ tasks:
   test:
     desc: Run pytest suite
     cmds:
-      - source .env && ./.venv/bin/python3 -m pytest --cov=tests --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage_html --junitxml=report.xml --html=report.html --self-contained-html
+      - mkdir -p outputs
+      - source .env && ./.venv/bin/python3 -m pytest --cov=tests --cov-report=term-missing --cov-report=xml:outputs/coverage.xml --cov-report=html:outputs/coverage_html --junitxml=outputs/report.xml --html=outputs/report.html --self-contained-html
 
   lint:
     desc: Run Python linting (flake8, black) and Terraform formatting
@@ -153,7 +218,8 @@ tasks:
     desc: Cleanup all temporary files, virtual environments, and Docker resources
     cmds:
       - task: down
-      - rm -rf {{.INIT_FILE}} terraform/.terraform terraform/terraform.tfstate terraform/terraform.tfstate.backup .pytest_cache report.xml coverage.xml report.html coverage_html
+      - sleep 5
+      - rm -rf {{.INIT_FILE}} terraform/.terraform terraform/terraform.tfstate terraform/terraform.tfstate.backup .pytest_cache outputs
       - |
         VOLUMES=$(docker volume ls -q -f name={{.PROJECT_NAME}})
         if [ ! -z "$VOLUMES" ]; then
@@ -161,6 +227,7 @@ tasks:
         fi
 
   vault:upgrade:
+    aliases: [upgrade]
     desc: Upgrade Vault version and run tests
     cmds:
       - |
@@ -179,5 +246,5 @@ tasks:
       - task: lint
       - task: up
       - task: init
-      - task: terraform:apply
+      - task: apply
       - task: test

@@ -47,6 +47,25 @@ services:
       retries: 5
       start_period: 20s
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}_postgres
+    environment:
+      POSTGRES_USER: vaultadmin
+      POSTGRES_PASSWORD: vaultadminpassword
+      POSTGRES_DB: vaultdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./configs/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vaultadmin -d vaultdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 configs:
   vault-config:
     file: ./configs/vault/vault.hcl
@@ -60,3 +79,4 @@ volumes:
   vault_logs:
   ldap_data:
   ldap_config:
+  postgres_data:
