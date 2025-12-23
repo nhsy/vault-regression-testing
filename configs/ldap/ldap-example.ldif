@@ -1,0 +1,66 @@
+dn: ou=People,dc=example,dc=org
+objectClass: organizationalUnit
+ou: People
+
+dn: ou=Groups,dc=example,dc=org
+objectClass: organizationalUnit
+ou: Groups
+
+# Users
+dn: uid=bob,ou=People,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: bob
+cn: Bob Admin
+sn: Admin
+givenName: Bob
+mail: bob@example.org
+userPassword: password
+uidNumber: 1000
+gidNumber: 1000
+homeDirectory: /home/bob
+loginShell: /bin/bash
+
+dn: uid=alice,ou=People,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: alice
+cn: Alice Dev
+sn: Dev
+givenName: Alice
+mail: alice@example.org
+userPassword: password
+uidNumber: 1001
+gidNumber: 1001
+homeDirectory: /home/alice
+loginShell: /bin/bash
+
+dn: uid=charlie,ou=People,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: charlie
+cn: Charlie Static
+sn: Static
+givenName: Charlie
+mail: charlie@example.org
+userPassword: password
+uidNumber: 1002
+gidNumber: 1001
+homeDirectory: /home/charlie
+loginShell: /bin/bash
+
+# Groups
+dn: cn=developers,ou=Groups,dc=example,dc=org
+objectClass: posixGroup
+cn: developers
+gidNumber: 5000
+memberUid: alice
+
+dn: cn=vault-admins,ou=Groups,dc=example,dc=org
+objectClass: posixGroup
+cn: vault-admins
+gidNumber: 5001
+memberUid: bob

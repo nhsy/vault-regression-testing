@@ -13,7 +13,7 @@ Manual regression testing of HashiCorp Vault configurations is error-prone and t
 The solution is built on a modular stack that emphasizes automation, reproducibility, and isolation.
 
 - **Orchestration**: [Go Task](https://taskfile.dev/) (Taskfile.yml) serves as the entry point for all operations.
-- **Infrastructure**: [Docker Compose](https://docs.docker.com/compose/) manages a Vault container in **Standard Mode** with a persistent `file` backend.
+- **Infrastructure**: [Docker Compose](https://docs.docker.com/compose/) manages a Vault container in **Standard Mode** with a persistent `file` backend, and an **OpenLDAP** container for identity testing.
 - **Configuration Management**: [Terraform](https://www.terraform.io/) is the "source of truth" for Vault's internal state (policies, auth methods, and secrets engines).
 - **Verification**: [Pytest](https://docs.pytest.org/) with the [hvac](https://github.com/hvac/hvac) library performs assertions against the live Vault API.
 
@@ -38,6 +38,8 @@ The solution is built on a modular stack that emphasizes automation, reproducibi
     |    +---------v---------+   |
     +--->|  Vault Container  |<--+
          +-------------------+
+         |  OpenLDAP Container |
+         +---------------------+
 ```
 
 ---
@@ -51,7 +53,7 @@ task prereqs
 ```
 
 ### Virtual Environment
-Setup the Python virtual environment to manage dependencies:
+Setup the Python virtual environment, install dependencies, and create `.env` from template:
 ```bash
 task setup
 ```
@@ -70,13 +72,16 @@ task all
 
 ### Step-by-Step Breakdown
 
-1. **Start Vault**: `task up` starts the container using `configs/vault.hcl`.
-2. **Initialize & Unseal**: 
-   - `task init`: Generates keys and stores them in `.vault_init.json`.
-   - `task unseal`: Makes the Vault operational.
-3. **Configure Resources**: `task config` applies Terraform configuration:
+1. **Start Infrastructure**: `task up` starts Vault and OpenLDAP containers and waits for readiness.
+2. **Initialize Services**: `task init` performs consolidated initialization:
+   - Seeds LDAP server with sample users and groups.
+   - Generates Vault keys and stores them in `.vault_init.json`.
+   - Unseals Vault to make it operational.
+3. **Configure Resources**: `task terraform:apply` applies Terraform configuration:
    - **KV V2 Secrets Engine** at `secret/`.
    - **AppRole Auth** for machine authentication.
+   - **LDAP Auth** with Identity Group mapping.
+   - **LDAP Secrets Engine** for static/dynamic credentials.
    - **Policies** (admin, read-only).
    - **Audit Devices** for tracking activity.
 
@@ -95,6 +100,11 @@ task test
 - **System Health**: Verifies initialization, unseal status, and versioning.
 - **KV Secrets**: Tests CRUD operations on the V2 engine.
 - **AppRole Auth**: Validates login capabilities and policy attachment.
+- **LDAP Integration**:
+  - Authenticates as LDAP users (`alice`, `bob`).
+  - Verifies policy assignment via Identity Groups.
+  - Rotates static LDAP credentials.
+  - Generates dynamic LDAP credentials.
 - **Security**: Asserts unauthorized access blocks and audit log status.
 
 ---
@@ -102,16 +112,16 @@ task test
 ## 5. Maintenance & Troubleshooting
 
 ### Upgrading & Status
-- **Upgrade**: `task upgrade` updates the Vault version (defined by `VAULT_VERSION_UPGRADE` in `.env`), recreates the container, unseals it, and runs the regression suite to ensure compatibility.
-- **Status**: `task status` provides a quick snapshot of the Vault server's health and seal status.
+- **Upgrade**: `task vault:upgrade` updates the Vault version (defined by `VAULT_VERSION_UPGRADE` in `.env`), recreates the container, unseals it, and runs the regression suite to ensure compatibility.
+- **Status**: `task vault:status` provides a quick snapshot of the Vault server's health and seal status.
 
 ### Teardown
 - **Stop**: `task down` stops the container.
 - **Full Clean**: `task clean` removes temporary files and Docker volumes (preserves `.venv`).
 
 ### Troubleshooting
-- **Vault is sealed**: Run `task unseal`.
-- **Terraform errors**: Ensure `VAULT_ADDR` and `VAULT_TOKEN` are set correctly (handled by `task config`).
+- **Vault is sealed**: Run `task vault:unseal`.
+- **Terraform errors**: Ensure `VAULT_ADDR` and `VAULT_TOKEN` are set correctly (handled by `task terraform:apply`).
 - **Python errors**: Ensure the virtual environment is used (`task test` handles this).
 
 ---

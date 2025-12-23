@@ -13,6 +13,7 @@ This project provides a Vault test environment running in Docker. It uses Terraf
 - **Automation**: Fully automated initialization, unsealing, and token management.
 - **Testing**: Extended Pytest suite covering health checks, KV secrets, AppRole authentication, security policies, and operational status.
 - **Audit Logging**: Configurable file-based audit logging (enabled to stdout by default).
+- **LDAP Integration**: Integrated OpenLDAP environment for testing authentication, group mapping, and dynamic secrets.
 - **Code Quality**: Automated Python linting with `flake8` and formatting with `black` (integrated into the pipeline).
 
 ## Prerequisites
@@ -33,20 +34,27 @@ task prereqs
 ```text
 .
 ├── Taskfile.yml           # Core orchestration tasks
-├── configs/               # Vault configuration files
-│   └── vault.hcl          # Vault server config (Docker Config)
+├── configs/               # Configuration files
+│   ├── vault/             # Vault server config
+│   │   └── vault.hcl
+│   └── ldap/              # LDAP seed data
+│       └── ldap-example.ldif
 ├── docker-compose.yaml    # Docker infrastructure
 ├── terraform/             # Vault resource management
 │   ├── main.tf            # Provider and core setup
 │   ├── audit.tf           # Audit logging configuration
 │   ├── auth_approle.tf    # AppRole configuration
+│   ├── auth_ldap.tf       # LDAP Auth configuration
+│   ├── identity_ldap.tf   # Identity & Group mapping
 │   ├── secrets_kv.tf      # KV secrets engine
+│   ├── secrets_ldap.tf    # LDAP secrets engine
 │   └── policies.tf        # Access control policies
 ├── tests/                 # Pytest regression suite
 │   ├── conftest.py        # Shared fixtures & path handling
 │   ├── test_approle.py    # AppRole auth tests
 │   ├── test_health.py     # System health checks
 │   ├── test_kv.py         # Secret readability tests
+│   ├── test_ldap.py       # LDAP integration tests
 │   └── test_enhanced.py   # Security, operational, and KV metadata tests
 ├── improvements.md        # Roadmap for future improvements
 ├── .env                   # Environment variables (auto-sourced)
@@ -66,22 +74,25 @@ Then, run the full regression pipeline:
 ```bash
 task all
 ```
-*Note: `task all` runs `prereqs`, `lint`, `up`, `init`, `unseal`, `config`, and `test`. It leaves the environment running for inspection.*
+*Note: `task all` runs `prereqs`, `lint`, `up`, `init`, `terraform:apply`, and `test`. It leaves the environment running for inspection.*
 
 ### 2. Individual Tasks
 - `task prereqs`: Check if all required tools (Docker, Terraform, jq, Python) are installed.
 - `task clean`: Cleanup temporary files and Docker resources (preserves `.venv`).
-- `task setup`: Setup Python virtual environment & install dependencies.
+- `task setup`: Setup Python virtual environment, install dependencies, and create `.env` from template.
 - `task lint`: Run flake8 and black check on the `tests/` directory.
-- `task up`: Start Vault container.
-- `task init`: Initialize Vault and generate `.vault_init.json`.
-- `task unseal`: Unseal the Vault using stored keys.
-- `task config`: Apply Terraform configuration (KV, AppRole, Policies, Audit).
+- `task up`: Start Vault and OpenLDAP containers.
+- `task init`: Initialize both LDAP and Vault (runs `ldap:init`, `vault:init`, and `vault:unseal`).
+- `task ldap:init`: Seed OpenLDAP with sample users and groups.
+- `task ldap:status`: Check connectivity to OpenLDAP and list users.
+- `task vault:init`: Initialize Vault and generate `.vault_init.json`.
+- `task vault:unseal`: Unseal the Vault using stored keys.
+- `task vault:status`: Check the current status of the Vault server.
+- `task vault:upgrade`: Upgrade Vault version (configurable via `VAULT_VERSION_UPGRADE` in `.env`) and re-run regression suite.
+- `task terraform:apply`: Apply Terraform configuration (KV, AppRole, LDAP, Policies, Audit).
+- `task terraform:destroy`: Destroy Terraform resources.
 - `task test`: Run the full pytest suite.
-- `task upgrade`: Upgrade Vault version (configurable via `VAULT_VERSION_UPGRADE` in `.env`) and re-run regression suite.
-- `task status`: Check the current status of the Vault server.
-- `task teardown`: Destroy Terraform resources.
-- `task down`: Stop the Vault container and remove networks.
+- `task down`: Stop the containers and remove networks.
 
 ## Documentation
 

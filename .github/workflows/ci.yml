@@ -33,28 +33,58 @@ jobs:
         with:
           version: 3.x
           
-      - name: Initialize Virtual Environment
+      - name: Get Versions
+        id: versions
         run: |
+          echo "vault=$(grep 'VAULT_VERSION=' .env.example | cut -d '=' -f 2)" >> $GITHUB_OUTPUT
+          echo "python_hash=${{ hashFiles('requirements.txt') }}" >> $GITHUB_OUTPUT
+
+      - name: Cache Virtual Environment
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.versions.outputs.python_hash }}
+
+      - name: Cache Vault Binary
+        id: cache-vault
+        uses: actions/cache@v4
+        with:
+          path: ~/bin/vault
+          key: vault-${{ runner.os }}-${{ steps.versions.outputs.vault }}
+
+      - name: Download Vault Binary
+        run: |
+          mkdir -p ~/bin
+          if [ ! -f ~/bin/vault ]; then
+            VERSION=${{ steps.versions.outputs.vault }}
+            echo "Installing Vault ${VERSION}"
+            curl -sLo vault.zip "https://releases.hashicorp.com/vault/${VERSION}/vault_${VERSION}_linux_amd64.zip"
+            unzip vault.zip vault
+            mv vault ~/bin/
+          fi
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Setup Environment and Lint
+        run: |
+          task prereqs
           task setup
+          task lint
 
-      - name: Install Vault CLI
+      - name: Start Services and Configure
         run: |
-          source .env
-          echo "Installing Vault ${VAULT_VERSION}"
-          curl -sLo vault.zip "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip"
-          unzip vault.zip vault
-          sudo mv vault /usr/local/bin/
-          vault version
+          task up
+          task init
+          task terraform:apply
+          sleep 10
 
-      - name: Run Regression Suite
+      - name: Run Tests
         run: |
-          export PATH=$PWD/.venv/bin:$PATH
-          task all
+          task test
 
       - name: Upgrade Vault to new version and re-run regression suite
         run: |
           export PATH=$PWD/.venv/bin:$PATH
-          task upgrade
+          task vault:upgrade
 
       - name: Upload Test Results
         if: always()

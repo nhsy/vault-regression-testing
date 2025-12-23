@@ -1,7 +1,7 @@
 services:
   vault:
     image: hashicorp/vault:${VAULT_VERSION:-1.19.5}
-    container_name: vault-regression-test
+    container_name: ${COMPOSE_PROJECT_NAME}_vault
     env_file:
       - .env
     ports:
@@ -10,18 +10,53 @@ services:
       - IPC_LOCK
     volumes:
       - vault_data:/vault/file
+      - vault_logs:/vault/logs
     configs:
       - source: vault-config
         target: /etc/vault.hcl
     command: server -config=/etc/vault.hcl
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:8200/v1/sys/health?standbyok=true&sealedcode=200&uninitcode=200"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  ldap:
+    image: osixia/openldap:1.5.0
+    container_name: ${COMPOSE_PROJECT_NAME}_ldap
+    environment:
+      LDAP_ORGANISATION: "Example Org"
+      LDAP_DOMAIN: "example.org"
+      LDAP_ADMIN_PASSWORD: "adminpassword"
+      LDAP_CONFIG_PASSWORD: "configpassword"
+      LDAP_BASE_DN: "dc=example,dc=org"
+      LDAP_TLS: "false"
+    ports:
+      - "389:389"
+      - "636:636"
+    volumes:
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+      - ./configs/ldap/ldap-example.ldif:/ldap-example.ldif
+    command: --copy-service
+    healthcheck:
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost:389 -b dc=example,dc=org -D cn=admin,dc=example,dc=org -w adminpassword > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 configs:
   vault-config:
-    file: ./configs/vault.hcl
+    file: ./configs/vault/vault.hcl
 
 networks:
   default:
-    name: ${COMPOSE_PROJECT_NAME:-vault-regression-testing}
+    name: ${COMPOSE_PROJECT_NAME}
 
 volumes:
   vault_data:
+  vault_logs:
+  ldap_data:
+  ldap_config:

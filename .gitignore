@@ -34,6 +34,15 @@ coverage_html/
 *.swo
 
 # OS
+
 .DS_Store
+
 Thumbs.db
-/CLAUDE.md
+
+
+
+CLAUDE.md
+
+
+
+references/

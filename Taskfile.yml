@@ -4,6 +4,9 @@ dotenv: ['.env']
 
 vars:
   INIT_FILE: .vault_init.json
+  PROJECT_NAME: '{{.COMPOSE_PROJECT_NAME | default "vault-regression-testing"}}'
+  VAULT_CONTAINER: '{{.COMPOSE_PROJECT_NAME | default "vault-regression-testing"}}_vault'
+  LDAP_CONTAINER: '{{.COMPOSE_PROJECT_NAME | default "vault-regression-testing"}}_ldap'
 
 tasks:
   prereqs:
@@ -26,7 +29,7 @@ tasks:
     silent: true
 
   up:
-    desc: Start Vault container and wait for readiness
+    desc: Start Vault and LDAP containers and wait for readiness
     cmds:
       - docker compose up -d
       - |
@@ -35,20 +38,46 @@ tasks:
         for i in $(seq 1 30); do
           if curl -s -o /dev/null $VAULT_ADDR/v1/sys/health; then
             echo "Vault API is responding"
+            break
+          fi
+          sleep 1
+        done
+        echo "Waiting for LDAP to be ready..."
+        for i in $(seq 1 30); do
+          if docker exec {{.LDAP_CONTAINER}} ldapsearch -x -b "dc=example,dc=org" -D "cn=admin,dc=example,dc=org" -w adminpassword > /dev/null 2>&1; then
+            echo "LDAP is responding"
             exit 0
           fi
           sleep 1
         done
-        echo "Timeout waiting for Vault"
+        echo "Timeout waiting for services"
         exit 1
     silent: true
 
   down:
-    desc: Stop Vault container
+    desc: Stop containers and remove volumes
     cmds:
-      - docker compose down
+      - docker compose down -v --remove-orphans
 
   init:
+    desc: Initialize both LDAP and Vault
+    cmds:
+      - test -f .env || cp .env.example .env
+      - task: ldap:init
+      - task: vault:init
+      - task: vault:unseal
+
+  ldap:init:
+    desc: Initialize LDAP with sample data
+    cmds:
+      - docker exec {{.LDAP_CONTAINER}} ldapadd -x -D "cn=admin,dc=example,dc=org" -w adminpassword -f /ldap-example.ldif -c || true
+
+  ldap:status:
+    desc: Check LDAP status and list users
+    cmds:
+      - docker exec {{.LDAP_CONTAINER}} ldapsearch -x -D "cn=admin,dc=example,dc=org" -w adminpassword -b "ou=People,dc=example,dc=org" "(objectClass=inetOrgPerson)" dn
+
+  vault:init:
     desc: Initialize Vault and update .env
     interactive: true
     cmds:
@@ -62,7 +91,7 @@ tasks:
             exit 0
           fi
         fi
-        docker exec -e VAULT_ADDR=$VAULT_ADDR vault-regression-test vault operator init -format=json > {{.INIT_FILE}}
+        docker exec -e VAULT_ADDR=$VAULT_ADDR {{.VAULT_CONTAINER}} vault operator init -format=json > {{.INIT_FILE}}
         if [ -s {{.INIT_FILE}} ]; then
           ROOT_TOKEN=$(jq -r '.root_token' {{.INIT_FILE}})
           sed -i.bak "s/export VAULT_TOKEN=.*/export VAULT_TOKEN=$ROOT_TOKEN/" .env && rm .env.bak
@@ -72,7 +101,7 @@ tasks:
           exit 1
         fi
 
-  unseal:
+  vault:unseal:
     desc: Unseal Vault
     cmds:
       - |
@@ -80,26 +109,32 @@ tasks:
         if [ -f {{.INIT_FILE}} ]; then
           KEYS=$(jq -r '.unseal_keys_b64[]' {{.INIT_FILE}})
           for key in $KEYS; do
-            docker exec -e VAULT_ADDR=$VAULT_ADDR vault-regression-test vault operator unseal $key
+            docker exec -e VAULT_ADDR=$VAULT_ADDR {{.VAULT_CONTAINER}} vault operator unseal $key
           done
         else
           echo "Init file missing. Cannot unseal."
           exit 1
         fi
 
-  status:
+  vault:status:
     desc: Check Vault status
     cmds:
       - |
         source .env
         vault status
 
-  config:
+  terraform:apply:
     desc: Initialize and apply Terraform configuration
     dir: terraform
     cmds:
       - export PATH="$PATH:$HOME/bin" && terraform init
       - . ../.env && terraform apply -auto-approve
+
+  terraform:destroy:
+    desc: Destroy Terraform resources
+    dir: terraform
+    cmds:
+      - . ../.env && export PATH="$PATH:$HOME/bin" && terraform destroy -auto-approve -lock=false
 
   test:
     desc: Run pytest suite
@@ -112,38 +147,35 @@ tasks:
       - ./.venv/bin/python3 -m flake8 tests
       - ./.venv/bin/python3 -m black --check tests
 
-  teardown:
-    desc: Destroy Terraform resources
-    dir: terraform
-    cmds:
-      - . ../.env && export PATH="$PATH:$HOME/bin" && terraform destroy -auto-approve -lock=false
-
   clean:
     desc: Cleanup all temporary files, virtual environments, and Docker resources
     cmds:
       - task: down
       - rm -rf {{.INIT_FILE}} terraform/.terraform terraform/terraform.tfstate terraform/terraform.tfstate.backup .pytest_cache report.xml coverage.xml report.html coverage_html
-      - docker volume rm vault-regression-testing_vault_data 2>/dev/null || true
+      - |
+        VOLUMES=$(docker volume ls -q -f name={{.PROJECT_NAME}})
+        if [ ! -z "$VOLUMES" ]; then
+          docker volume rm $VOLUMES 2>/dev/null || true
+        fi
 
-  upgrade:
+  vault:upgrade:
     desc: Upgrade Vault version and run tests
     cmds:
       - |
         source .env
         VAULT_VERSION=$VAULT_VERSION_UPGRADE docker compose up -d --force-recreate
         VAULT_VERSION=$VAULT_VERSION_UPGRADE task up
-      - task: unseal
-      - task: status
+      - task: vault:unseal
+      - task: vault:status
       - task: test
 
   all:
-    desc: Run everything (clean, lint, up, init, unseal, config, test)
+    desc: Run everything
     cmds:
-      - test -f .env || cp .env.example .env
       - task: prereqs
       - task: lint
       - task: up
       - task: init
-      - task: unseal
-      - task: config
+      - task: terraform:apply
+      - sleep 10
       - task: test
