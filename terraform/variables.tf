@@ -1,10 +1,3 @@
-variable "vault_address" {
-  description = "Vault server URL"
-  type        = string
-  default     = "http://127.0.0.1:8200"
-}
-
-
 variable "kv_mount_path" {
   description = "Path to mount the KV secrets engine"
   type        = string
@@ -51,4 +44,16 @@ variable "pki_mount_path" {
   description = "Path to mount the PKI secrets engine"
   type        = string
   default     = "pki"
+}
+
+variable "github_org" {
+  description = "GitHub Organization or User"
+  type        = string
+  default     = "nhsy"
+}
+
+variable "github_repository" {
+  description = "GitHub Repository Name"
+  type        = string
+  default     = "vault-regression-testing"
 }

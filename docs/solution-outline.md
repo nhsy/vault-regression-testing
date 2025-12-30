@@ -81,7 +81,9 @@ task all
    - Unseals Vault to make it operational.
 3. **Configure Resources**: `task terraform:apply` applies Terraform configuration:
    - **KV V2 Secrets Engine** at `secret/`.
+   - **PKI Secrets Engine** for certificate generation.
    - **AppRole Auth** for machine authentication.
+   - **OIDC/JWT Auth** for GitHub Actions integration.
    - **LDAP Auth** with Identity Group mapping.
    - **LDAP Secrets Engine** for static/dynamic credentials.
    - **Database Secrets Engine** with PostgreSQL connection and dynamic roles.
@@ -102,7 +104,13 @@ task test
 ### Test Coverage
 - **System Health**: Verifies initialization, unseal status, and versioning.
 - **KV Secrets**: Tests CRUD operations on the V2 engine.
+- **PKI Secrets**:
+  - Validates certificate generation against configured roles.
+  - Verifies certificate fields (CN, issuer, private key).
 - **AppRole Auth**: Validates login capabilities and policy attachment.
+- **OIDC Integration**:
+  - Verifies GitHub Actions OIDC login (skipped locally).
+  - Validates `repository` claim binding to specific GitHub repositories.
 - **Database Secrets**:
   - Generates dynamic PostgreSQL credentials (readonly and readwrite roles).
   - Verifies database connectivity with generated credentials.

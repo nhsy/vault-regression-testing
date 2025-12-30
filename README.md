@@ -11,7 +11,8 @@ This project provides a Vault test environment running in Docker. It uses Terraf
 ## Key Features
 
 - **Automation**: Fully automated initialization, unsealing, and token management.
-- **Testing**: Extended Pytest suite covering health checks, KV secrets, AppRole authentication, security policies, and operational status.
+- **Testing**: Extended Pytest suite covering health checks, KV secrets, AppRole authentication, PKI certificates, security policies, and operational status.
+- **OIDC Authentication**: Native OIDC integration with GitHub Actions provided by Vault's JWT auth backend.
 - **Audit Logging**: Configurable file-based audit logging (enabled to stdout by default).
 - **LDAP Integration**: Integrated OpenLDAP environment for testing authentication, group mapping, and dynamic secrets.
 - **Database Secrets**: PostgreSQL integration with dynamic database credential generation and rotation testing.
@@ -45,7 +46,9 @@ task prereqs
 ├── docker-compose.yaml    # Docker infrastructure
 ├── terraform/             # Vault resource management
 │   ├── main.tf            # Provider and core setup
+│   ├── variables.tf       # Configuration variables
 │   ├── audit.tf           # Audit logging configuration
+│   ├── auth_oidc.tf       # OIDC configuration for GitHub Actions
 │   ├── auth_approle.tf    # AppRole configuration
 │   ├── auth_ldap.tf       # LDAP Auth configuration
 │   ├── identity_ldap.tf   # Identity & Group mapping
@@ -56,6 +59,7 @@ task prereqs
 ├── tests/                 # Pytest regression suite
 │   ├── conftest.py        # Shared fixtures & path handling
 │   ├── test_approle.py    # AppRole auth tests
+│   ├── test_pki.py        # PKI secrets engine tests
 │   ├── test_database.py   # Database dynamic secrets tests
 │   ├── test_health.py     # System health checks
 │   ├── test_kv.py         # Secret readability tests

@@ -1,7 +1,3 @@
-output "vault_address" {
-  value = var.vault_address
-}
-
 output "kv_mount_path" {
   value = vault_mount.kv.path
 }
@@ -25,7 +21,6 @@ output "test_secret_path" {
 
 output "test_config" {
   value = {
-    vault_address    = var.vault_address
     kv_mount         = vault_mount.kv.path
     approle_mount    = vault_auth_backend.approle.path
     approle_role     = vault_approle_auth_backend_role.test_role.role_name
