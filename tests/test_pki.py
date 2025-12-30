@@ -21,3 +21,8 @@ def test_pki_generate_cert(vault_client, tf_outputs):
     assert "BEGIN RSA PRIVATE KEY" in data["private_key"]
     assert "serial_number" in data
     assert "BEGIN RSA PRIVATE KEY" in data["private_key"]
+
+    # Verify TTL
+    assert "lease_duration" in response
+    assert response["lease_duration"] > 0
+    assert "expiration" in data

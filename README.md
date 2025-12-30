@@ -64,6 +64,7 @@ task prereqs
 │   ├── test_health.py     # System health checks
 │   ├── test_kv.py         # Secret readability tests
 │   ├── test_ldap.py       # LDAP integration tests
+│   ├── test_oidc.py       # OIDC authentication tests
 │   └── test_enhanced.py   # Security, operational, and KV metadata tests
 ├── improvements.md        # Roadmap for future improvements
 ├── .env                   # Environment variables (auto-sourced)

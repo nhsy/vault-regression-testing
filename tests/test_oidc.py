@@ -34,9 +34,7 @@ def test_github_oidc_login(tf_outputs):
     vault_addr = os.getenv("VAULT_ADDR", "http://127.0.0.1:8200")
 
     # Fetch oidc token
-    # The audience must match what we configured in Vault.
-    # We used "https://github.com/narish" in terraform config.
-    audience = "https://github.com/nhsy"
+    audience = f"https://github.com/{os.getenv('GITHUB_REPOSITORY')}"
 
     try:
         id_token = get_github_oidc_token(audience)
@@ -62,7 +60,16 @@ def test_github_oidc_login(tf_outputs):
     # Verify we have the expected policies
     policies = login_response["auth"]["policies"]
     assert "default" in policies
-    assert "readonly" in policies
+    assert "read-only" in policies
 
-    # Optional: Verify we can actually read a secret if one exists
-    # and we have permissions. But checking authentication is the primary goal here.
+    # Verify we can read the secret
+    mount_point = tf_outputs["kv_mount_path"]
+    secret_path = tf_outputs["test_secret_path"]
+
+    try:
+        read_response = client.secrets.kv.v2.read_secret_version(
+            path=secret_path, mount_point=mount_point, raise_on_deleted_version=True
+        )
+        assert read_response["data"]["data"]["api_key"] == "test-12345"
+    except Exception as e:
+        pytest.fail(f"Failed to read secret from Vault: {e}")

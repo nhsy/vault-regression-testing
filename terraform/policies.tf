@@ -19,7 +19,11 @@ resource "vault_policy" "admin" {
 resource "vault_policy" "read_only" {
   name   = "read-only"
   policy = <<-EOT
-    path "*" {
+    path "${var.kv_mount_path}/data/*" {
+      capabilities = ["read", "list"]
+    }
+
+    path "${var.kv_mount_path}/metadata/*" {
       capabilities = ["read", "list"]
     }
   EOT

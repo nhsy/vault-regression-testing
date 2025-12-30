@@ -17,32 +17,7 @@ The solution is built on a modular stack that emphasizes automation, reproducibi
 - **Configuration Management**: [Terraform](https://www.terraform.io/) is the "source of truth" for Vault's internal state (policies, auth methods, and secrets engines).
 - **Verification**: [Pytest](https://docs.pytest.org/) with the [hvac](https://github.com/hvac/hvac) library performs assertions against the live Vault API.
 
-```text
-        +------------------+
-        |  User / Developer  |
-        +---------+--------+
-                  |
-                  v
-        +------------------+
-        |     Taskfile     | (Orchestration)
-        +----+----+----+---+
-             |    |    |
-    +--------+    |    +---------+
-    |             |              |
-    v             v              v
-+--------+   +-----------+   +--------+
-| Docker |   | Terraform |   | Pytest |
-| Compose|   | (Config)  |   | (Test) |
-+---+----+   +-----+-----+   +---+----+
-    |              |             |
-    |    +---------v---------+   |
-    +--->|  Vault Container  |<--+
-         +-------------------+
-         | PostgreSQL Container |
-         +----------------------+
-         |  OpenLDAP Container  |
-         +----------------------+
-```
+![Architecture Diagram](diagram.png)
 
 ---
 
@@ -111,6 +86,7 @@ task test
 - **OIDC Integration**:
   - Verifies GitHub Actions OIDC login (skipped locally).
   - Validates `repository` claim binding to specific GitHub repositories.
+  - Verifies authenticated access to KV secrets (`test-12345`).
 - **Database Secrets**:
   - Generates dynamic PostgreSQL credentials (readonly and readwrite roles).
   - Verifies database connectivity with generated credentials.
