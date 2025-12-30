@@ -38,18 +38,29 @@ jobs:
         run: |
           echo "vault=$(grep 'VAULT_VERSION=' .env.example | cut -d '=' -f 2)" >> $GITHUB_OUTPUT
           echo "python_hash=${{ hashFiles('requirements.txt') }}" >> $GITHUB_OUTPUT
+          echo "terraform_hash=${{ hashFiles('terraform/*.tf') }}" >> $GITHUB_OUTPUT
 
       - name: Cache Virtual Environment
         uses: actions/cache@v4
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ steps.versions.outputs.python_hash }}
+          restore-keys: |
+            venv-${{ runner.os }}-
+
+      - name: Cache Terraform
+        uses: actions/cache@v4
+        with:
+          path: terraform/.terraform
+          key: terraform-${{ runner.os }}-${{ steps.versions.outputs.terraform_hash }}
+          restore-keys: |
+            terraform-${{ runner.os }}-
 
       - name: Cache Vault Binary
         id: cache-vault
         uses: actions/cache@v4
         with:
-          path: /usr/local/bin/vault
+          path: ${{ github.workspace }}/bin/vault
           key: vault-${{ runner.os }}-${{ steps.versions.outputs.vault }}
 
       - name: Download Vault Binary
@@ -57,9 +68,14 @@ jobs:
         run: |
           VERSION=${{ steps.versions.outputs.vault }}
           echo "Installing Vault ${VERSION}"
+          mkdir -p ${{ github.workspace }}/bin
           curl -sLo vault.zip "https://releases.hashicorp.com/vault/${VERSION}/vault_${VERSION}_linux_amd64.zip"
           unzip vault.zip vault
-          sudo mv vault /usr/local/bin/
+          mv vault ${{ github.workspace }}/bin/
+          chmod +x ${{ github.workspace }}/bin/vault
+
+      - name: Add bin to PATH
+        run: echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
 
       - name: Setup Environment and Lint
         run: |
