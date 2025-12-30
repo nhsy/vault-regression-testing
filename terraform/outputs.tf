@@ -44,3 +44,11 @@ output "database_roles" {
     readwrite = vault_database_secret_backend_role.readwrite.name
   }
 }
+
+output "pki_mount_path" {
+  value = vault_mount.pki.path
+}
+
+output "pki_role_name" {
+  value = vault_pki_secret_backend_role.example_dot_com.name
+}

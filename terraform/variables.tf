@@ -46,3 +46,9 @@ variable "ldap_group_dn" {
   type        = string
   default     = "ou=Groups,dc=example,dc=org"
 }
+
+variable "pki_mount_path" {
+  description = "Path to mount the PKI secrets engine"
+  type        = string
+  default     = "pki"
+}
