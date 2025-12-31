@@ -24,9 +24,11 @@ This project provides a Vault test environment running in Docker. It uses Terraf
 - **Terraform**
 - **Go Task** (`task`)
 - **Python 3.14+**
+- **uv** (Package Manager)
 - **jq**
 
 You can verify your environment by running:
+
 ```bash
 task prereqs
 ```
@@ -75,21 +77,26 @@ task prereqs
 ## Getting Started
 
 ### 1. Initialize and Run Everything
+
 First, set up the virtual environment (run once):
+
 ```bash
 task setup
 ```
 
 Then, run the full regression pipeline:
+
 ```bash
 task all
 ```
+
 *Note: `task all` runs `prereqs`, `lint`, `up`, `init`, `terraform:apply`, and `test`. It leaves the environment running for inspection.*
 
 ### 2. Individual Tasks
+
 - `task prereqs`: Check if all required tools (Docker, Terraform, jq, Python) are installed.
 - `task clean`: Cleanup temporary files and Docker resources (preserves `.venv`).
-- `task setup`: Setup Python virtual environment, install dependencies, and create `.env` from template.
+- `task setup`: Setup Python virtual environment using `uv`, install dependencies, and create `.env` from template.
 - `task lint`: Run flake8 and black check on the `tests/` directory.
 - `task up`: Start Vault, PostgreSQL, and OpenLDAP containers.
 - `task init`: Initialize both LDAP and Vault (runs `ldap:init`, `vault:init`, and `vault:unseal`).
@@ -108,7 +115,7 @@ task all
 
 ## Documentation
 
-For a detailed analysis of the architecture, setup instructions, and verification steps, refer to the [Solution Outline](docs/solution-outline.md).
+For a detailed analysis of the architecture, refer to the [Solution Outline](docs/solution-outline.md).
 
 ---
 *Note: This framework is intended for regression testing and development environments.*

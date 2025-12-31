@@ -7,9 +7,11 @@ This document provides a detailed overview of the Vault Regression Testing Frame
 ## 1. Solution Outline
 
 ### Problem Statement
+
 Manual regression testing of HashiCorp Vault configurations is error-prone and time-consuming. As security policies, authentication methods, and secrets engines evolve, a reliable, automated way to verify that the Vault instance behaves as expected is critical for maintaining a secure infrastructure.
 
 ### High-Level Architecture
+
 The solution is built on a modular stack that emphasizes automation, reproducibility, and isolation.
 
 - **Orchestration**: [Go Task](https://taskfile.dev/) (Taskfile.yml) serves as the entry point for all operations.
@@ -24,13 +26,17 @@ The solution is built on a modular stack that emphasizes automation, reproducibi
 ## 2. Environment Setup
 
 ### Prerequisites Verification
-Run the following command to check for required tools (`docker`, `terraform`, `task`, `python`, `jq`):
+
+Run the following command to check for required tools (`docker`, `terraform`, `task`, `python`, `uv`, `jq`):
+
 ```bash
 task prereqs
 ```
 
 ### Virtual Environment
-Setup the Python virtual environment, install dependencies, and create `.env` from template:
+
+Setup the Python virtual environment using `uv`, install dependencies, and create `.env` from template:
+
 ```bash
 task setup
 ```
@@ -42,7 +48,9 @@ task setup
 The framework uses `Taskfile.yml` to orchestrate the entire lifecycle.
 
 ### Full Regression Run
+
 To spin up, configure, and run tests in one go:
+
 ```bash
 task all
 ```
@@ -72,11 +80,13 @@ task all
 The project uses `pytest` for regression testing, located in the `tests/` directory.
 
 ### Running Tests Manually
+
 ```bash
 task test
 ```
 
 ### Test Coverage
+
 - **System Health**: Verifies initialization, unseal status, and versioning.
 - **KV Secrets**: Tests CRUD operations on the V2 engine.
 - **PKI Secrets**:
@@ -104,14 +114,17 @@ task test
 ## 5. Maintenance & Troubleshooting
 
 ### Upgrading & Status
+
 - **Upgrade**: `task vault:upgrade` updates the Vault version (defined by `VAULT_VERSION_UPGRADE` in `.env`), recreates the container, unseals it, and runs the regression suite to ensure compatibility.
 - **Status**: `task vault:status` provides a quick snapshot of the Vault server's health and seal status.
 
 ### Teardown
+
 - **Stop**: `task down` stops the container.
 - **Full Clean**: `task clean` removes temporary files and Docker volumes (preserves `.venv`).
 
 ### Troubleshooting
+
 - **Vault is sealed**: Run `task vault:unseal`.
 - **Terraform errors**: Ensure `VAULT_ADDR` and `VAULT_TOKEN` are set correctly (handled by `task terraform:apply`).
 - **Python errors**: Ensure the virtual environment is used (`task test` handles this).
@@ -119,6 +132,6 @@ task test
 ---
 
 ## 6. Future Roadmap
-- **HA Mode Testing**: Implementing Consul or Raft for high-availability regression tests.
-- **Sentinel/EGP Integration**: Testing Enterprise-grade features.
+
 - **CI Enhancements**: Performance benchmarking in GitHub Actions.
+- **HA Mode Testing**: Implementing Consul or Raft for high-availability regression tests.

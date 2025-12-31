@@ -16,17 +16,18 @@ tasks:
       - which docker
       - which terraform
       - which jq
-      - which python3
       - which curl
+      - which uv
       - echo "All prerequisites are installed."
     silent: true
 
   setup:
     desc: Create virtual environment, install dependencies, and create .env
     cmds:
+
       - test -f .env || cp .env.example .env
-      - python3 -m venv .venv
-      - ./.venv/bin/pip install -r requirements.txt
+      - uv venv --allow-existing
+      - uv pip install -r requirements.txt
     silent: true
 
   up:
